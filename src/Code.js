@@ -21,11 +21,11 @@ var notificationSettings = (function () {
   var apiToken = scriptProperties.getProperty(SCRIPT_PROPERTY_KEYS.CHATWORK_API_TOKEN);
   var roomId = scriptProperties.getProperty(SCRIPT_PROPERTY_KEYS.CHATWORK_ROOM_ID);
   var message = scriptProperties.getProperty(SCRIPT_PROPERTY_KEYS.NOTIFICATION_MESSAGE);
-  
+
   if (apiToken == null || roomId == null || message == null) {
     return null;
   }
-  
+
   return {
     apiToken: apiToken,
     roomId: roomId,
@@ -43,6 +43,46 @@ var searchMessages = function (query, start, max) {
   });
 };
 
+var extract = function (gmailMessage) {
+  var dataList = [];
+
+  var date = gmailMessage.getDate();
+  var body = gmailMessage.getBody();
+  var bodyPosition = 0;
+
+  while (true) {
+    var index = body.indexOf('<div style="border-bottom: 1px solid #ccc;">', bodyPosition);
+    if (index < 0) {
+      break;
+    }
+
+    var matches = body.substr(index).match(/<a href="([^"]+)">([^<]+)<\/a>/);
+    var linkUrl = matches[1];
+    var titleOfJob = matches[2];
+
+    matches = body.substr(index).match(/<p[^>]*>\s+【([^】]+)】予算 : ([^<]+)<\/p>/);
+    var orderType = matches[1];
+    var budget = matches[2].trim();
+
+    matches = body.substr(index).match(/<p[^>]*>\s+([^<]+)<\/p>\s+<\/div>/);
+    var description = matches[1].trim();
+
+    dataList.push([
+      date,
+      titleOfJob,
+      orderType,
+      budget,
+      description,
+      linkUrl,
+      new Date()
+    ]);
+
+    bodyPosition = index + 1;
+  }
+
+  return dataList;
+}
+
 var notify = function () {
   if (notificationSettings == null) {
     Logger.log('[Notice] Skip notification due to insufficient settings');
@@ -57,13 +97,15 @@ var notify = function () {
   });
 };
 
+
 function execute() {
   if (sheet == null) throw new Error('[Error] sheet not found');
 
   var query = [
     'in:inbox',
-    'is:unread'
-//    'label:example'
+    'is:unread',
+    'from:no-reply@crowdworks.jp',
+    'subject:(保存した検索条件, 新着のお仕事)'
   ].join(' ');
   var gmailMessages = searchMessages(query);
   Logger.log('Messages: ' + gmailMessages.length);
@@ -74,15 +116,10 @@ function execute() {
     var gmailMessage = gmailMessages[i];
     Logger.log('Message: ' + gmailMessage.getId());
 
-    var date = gmailMessage.getDate();
-    var from = gmailMessage.getFrom();
-    var plainBody = gmailMessage.getPlainBody();
-
-    sheet.appendRow([
-      date,
-      from,
-      plainBody
-    ]);
+    var dataList = extract(gmailMessage);
+    for (var j=0; j<dataList.length; j++){
+      sheet.appendRow(dataList[j]);
+    }
 
     gmailMessage.markRead();
 
@@ -93,6 +130,6 @@ function execute() {
   if (isDirty) {
     notify();
   }
-  
+
   Logger.log('done');
 }
