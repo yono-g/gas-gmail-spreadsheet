@@ -105,27 +105,26 @@ function execute() {
     'in:inbox',
     'is:unread',
     'from:no-reply@crowdworks.jp',
-    'subject:(保存した検索条件, 新着のお仕事)'
+    'subject:新着のお仕事'
   ].join(' ');
   var gmailMessages = searchMessages(query);
   Logger.log('Messages: ' + gmailMessages.length);
 
   var isDirty = false;
 
-  for (var i=0; i<gmailMessages.length; i++) {
-    var gmailMessage = gmailMessages[i];
+  gmailMessages.forEach(function (gmailMessage) {
     Logger.log('Message: ' + gmailMessage.getId());
 
     var dataList = extract(gmailMessage);
-    for (var j=0; j<dataList.length; j++){
-      sheet.appendRow(dataList[j]);
-    }
+    dataList.forEach(function (data) {
+      sheet.appendRow(data);
+    });
 
     gmailMessage.markRead();
 
     isDirty = true;
     Logger.log('ok');
-  }
+  });
 
   if (isDirty) {
     notify();
