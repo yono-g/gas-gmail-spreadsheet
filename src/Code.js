@@ -60,7 +60,7 @@ var extract = function (gmailMessage) {
     var linkUrl = matches[1];
     var titleOfJob = matches[2];
 
-    matches = body.substr(index).match(/<p[^>]*>\s+【([^】]+)】予算 : ([^<]+)<\/p>/);
+    matches = body.substr(index).match(/<p[^>]*>\s+【([^】]+)】[^:]*:\s?([^<]+)<\/p>/);
     var orderType = matches[1];
     var budget = matches[2].trim();
 
