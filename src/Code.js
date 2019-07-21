@@ -29,7 +29,7 @@ var notificationSettings = (function () {
   return {
     apiToken: apiToken,
     roomId: roomId,
-    message: message
+    message: message.replace(/\\n/g, '\n')
   };
 }());
 
